@@ -41,11 +41,14 @@ class GPUBenchmark:
         
         self.device = select_device('0')
         
-        # 🚨 驗證裝置確實是 GPU
-        if self.device.type != 'cuda':
-            print(f"❌ 致命錯誤: 裝置是 {self.device.type}，不是 cuda!")
-            print("   這會導致測試在 CPU 上運行並產生假數據")
-            sys.exit(1)
+        # 🚨 強制確認真的用到 CUDA
+        assert hasattr(self.device, "type") and self.device.type == "cuda", \
+            f"❌ CUDA 未啟用：select_device 回傳 {self.device}。請檢查驅動/容器/PyTorch 安裝或 CUDA_VISIBLE_DEVICES。"
+        
+        # 優化 CUDA 設定
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True
         
         print(f"✅ 確認使用 GPU: {torch.cuda.get_device_name(0)}")
         print(f"✅ CUDA 版本: {torch.version.cuda}")
@@ -115,6 +118,33 @@ class GPUBenchmark:
         if hasattr(self, 'monitor_thread'):
             self.monitor_thread.join(timeout=1.0)
     
+    def _ensure_on_cuda(self, *objs):
+        """保證張量/模型在 CUDA（否則直接退出）"""
+        for o in objs:
+            if isinstance(o, torch.nn.Module):
+                p = next(o.parameters(), None)
+                assert p is not None and p.is_cuda, "❌ 模型參數不在 CUDA"
+            elif torch.is_tensor(o):
+                assert o.is_cuda, "❌ 張量不在 CUDA"
+            elif isinstance(o, (list, tuple)):
+                for t in o: 
+                    self._ensure_on_cuda(t)
+        return True
+    
+    def check_my_proc_on_gpu(self, gpu_index="0"):
+        """檢查本進程是否在 GPU 上運行"""
+        import subprocess
+        pid = str(os.getpid())
+        try:
+            out = subprocess.check_output(
+                ["nvidia-smi","--query-compute-apps=pid,process_name,used_gpu_memory",
+                 "--format=csv,noheader","-i",gpu_index],
+                text=True, stderr=subprocess.STDOUT, timeout=2
+            )
+            return pid in out  # True 視為我這個進程確實在佔用 GPU
+        except Exception:
+            return None  # 權限/平台限制，無法判定
+    
     def detect_gpu(self):
         """自動偵測 GPU 型號"""
         if torch.cuda.is_available():
@@ -155,14 +185,25 @@ class GPUBenchmark:
         def test_batch_size(batch_size):
             try:
                 torch.cuda.empty_cache()
-                dummy_input = torch.randn(batch_size, 3, 320, 320).to(self.device)
+                dummy_input = torch.randn(batch_size, 3, 320, 320).to(self.device, non_blocking=True)
                 dummy_targets = self.create_realistic_targets(batch_size)
                 
-                with torch.cuda.amp.autocast():
+                # 🚨 強制驗證在 CUDA 上
+                self._ensure_on_cuda(dummy_input, model)
+                
+                # 🚨 使用 CUDA Events 正確計時
+                start = torch.cuda.Event(enable_timing=True)
+                end = torch.cuda.Event(enable_timing=True)
+                start.record()
+                
+                with torch.cuda.amp.autocast(dtype=torch.bfloat16):  # H100 推薦 bf16
                     outputs = model(dummy_input)
                     loss, _ = compute_loss(outputs, dummy_targets)
                     loss.backward()
                     model.zero_grad()
+                
+                end.record()
+                torch.cuda.synchronize()
                 
                 del dummy_input, dummy_targets, outputs, loss
                 torch.cuda.empty_cache()
@@ -262,6 +303,25 @@ class GPUBenchmark:
                     start_time = time.time()
                     total_loss = 0
                     
+                    # 🚨 檢查進程是否真的在 GPU 上
+                    proc_on_gpu = self.check_my_proc_on_gpu()
+                    if proc_on_gpu is False:
+                        print(f"    ❌ 進程不在 GPU 上運行，中止測試!")
+                        batch_results[level] = {
+                            'error': 'Process not running on GPU',
+                            'successful': False
+                        }
+                        break
+                    elif proc_on_gpu is None:
+                        print(f"    ⚠️  無法檢查進程 GPU 狀態（權限限制）")
+                    else:
+                        print(f"    ✅ 確認進程在 GPU 上運行")
+                    
+                    # 使用 CUDA Events 正確計時
+                    start_event = torch.cuda.Event(enable_timing=True)
+                    end_event = torch.cuda.Event(enable_timing=True)
+                    start_event.record()
+                    
                     # 使用 tqdm 顯示進度
                     for i in tqdm(range(iterations), desc=f"    Batch {batch_size}", leave=False):
                         if dataloader and i % 10 == 0:
@@ -271,39 +331,48 @@ class GPUBenchmark:
                                 # 調整到目標 batch size
                                 if real_imgs.size(0) != batch_size:
                                     indices = torch.randint(0, real_imgs.size(0), (batch_size,))
-                                    test_input = real_imgs[indices].to(self.device)
+                                    test_input = real_imgs[indices].to(self.device, non_blocking=True)
                                     test_targets = real_targets[indices].to(self.device) if real_targets is not None else self.create_realistic_targets(batch_size)
                                 else:
-                                    test_input = real_imgs.to(self.device)
+                                    test_input = real_imgs.to(self.device, non_blocking=True)
                                     test_targets = real_targets.to(self.device) if real_targets is not None else self.create_realistic_targets(batch_size)
                             except:
-                                test_input = torch.randn(batch_size, 3, img_size, img_size).to(self.device)
+                                test_input = torch.randn(batch_size, 3, img_size, img_size).to(self.device, non_blocking=True)
                                 test_targets = self.create_realistic_targets(batch_size)
                         else:
                             # 使用模擬資料
-                            test_input = torch.randn(batch_size, 3, img_size, img_size).to(self.device)
+                            test_input = torch.randn(batch_size, 3, img_size, img_size).to(self.device, non_blocking=True)
                             test_targets = self.create_realistic_targets(batch_size)
                         
+                        # 🚨 強制驗證在 CUDA 上
+                        self._ensure_on_cuda(test_input, model)
+                        
                         # 前向+反向傳播
-                        with torch.cuda.amp.autocast():
+                        with torch.cuda.amp.autocast(dtype=torch.bfloat16):  # H100 推薦 bf16
                             outputs = model(test_input)
                             loss, loss_items = compute_loss(outputs, test_targets)
                             total_loss += loss.item()
                             
                         # 反向傳播
                         loss.backward()
-                        model.zero_grad()
+                        model.zero_grad(set_to_none=True)
                         
                         # 清理變數
                         del test_input, test_targets, outputs, loss
+                    
+                    end_event.record()
+                    torch.cuda.synchronize()
+                    
+                    # 使用 CUDA Events 的精確時間
+                    cuda_time = start_event.elapsed_time(end_event) / 1000.0  # 轉換為秒
                     
                     end_time = time.time()
                     
                     # 停止監控
                     self.stop_gpu_monitoring()
                     
-                    # 計算統計
-                    avg_time = (end_time - start_time) / iterations
+                    # 計算統計 - 使用 CUDA 精確時間
+                    avg_time = cuda_time / iterations
                     peak_memory = torch.cuda.max_memory_allocated() / 1024**3
                     avg_loss = total_loss / iterations
                     
@@ -312,19 +381,22 @@ class GPUBenchmark:
                     
                     batch_results[level] = {
                         'iterations': iterations,
-                        'total_time': end_time - start_time,
+                        'total_time_cuda': cuda_time,  # CUDA 精確時間
+                        'total_time_wall': end_time - start_time,  # 牆鐘時間
                         'avg_time_per_batch': avg_time,
                         'peak_memory_gb': peak_memory,
                         'avg_loss': avg_loss,
                         'fps': batch_size / avg_time,
                         'gpu_utilization_avg': gpu_analysis['avg_utilization'],
                         'gpu_temperature_max': gpu_analysis['max_temperature'],
+                        'proc_on_gpu_verified': proc_on_gpu,  # 進程驗證結果
                         'successful': True
                     }
                     
-                    print(f"    ⏱️  平均時間: {avg_time:.3f}s | 📊 FPS: {batch_size/avg_time:.1f}")
+                    print(f"    ⏱️  CUDA時間: {avg_time:.3f}s | 📊 FPS: {batch_size/avg_time:.1f}")
                     print(f"    💾 峰值記憶體: {peak_memory:.2f}GB | 🌡️  最高溫度: {gpu_analysis['max_temperature']:.1f}°C")
                     print(f"    📈 GPU 使用率: {gpu_analysis['avg_utilization']:.1f}% | 📉 平均 Loss: {avg_loss:.4f}")
+                    print(f"    ✅ 進程驗證: {proc_on_gpu}")
                     
                 except RuntimeError as e:
                     self.stop_gpu_monitoring()
