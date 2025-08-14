@@ -4,7 +4,7 @@ gpu_configs:
   RTX4090:
     name: "GeForce RTX 4090"
     memory_gb: 24
-    optimal_batch_sizes: [64, 128, 192, 256]
+    optimal_batch_sizes: [128, 256, 384, 512, 768]  # 擴展範圍
     recommended_workers: 8
     mixed_precision: true
     compile_mode: false
@@ -12,7 +12,7 @@ gpu_configs:
   RTX5090:
     name: "GeForce RTX 5090"
     memory_gb: 32
-    optimal_batch_sizes: [128, 192, 256, 320]
+    optimal_batch_sizes: [256, 384, 512, 768, 1024]  # 擴展範圍
     recommended_workers: 12
     mixed_precision: true
     compile_mode: true
@@ -20,7 +20,7 @@ gpu_configs:
   H100:
     name: "NVIDIA H100"
     memory_gb: 80
-    optimal_batch_sizes: [256, 384, 512, 640]
+    optimal_batch_sizes: [512, 768, 1024, 1280, 1536]  # 擴展範圍
     recommended_workers: 16
     mixed_precision: true
     compile_mode: true
@@ -28,7 +28,7 @@ gpu_configs:
   B200:
     name: "NVIDIA B200"
     memory_gb: 192
-    optimal_batch_sizes: [512, 768, 1024, 1280]
+    optimal_batch_sizes: [1024, 1536, 2048, 2560, 3072]  # 擴展範圍
     recommended_workers: 24
     mixed_precision: true
     compile_mode: true
