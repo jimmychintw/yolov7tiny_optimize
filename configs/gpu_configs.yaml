@@ -1,0 +1,52 @@
+# GPU 配置檔案 - 針對不同 GPU 優化的設定
+
+gpu_configs:
+  RTX4090:
+    name: "GeForce RTX 4090"
+    memory_gb: 24
+    optimal_batch_sizes: [64, 128, 192, 256]
+    recommended_workers: 8
+    mixed_precision: true
+    compile_mode: false
+    
+  RTX5090:
+    name: "GeForce RTX 5090"
+    memory_gb: 32
+    optimal_batch_sizes: [128, 192, 256, 320]
+    recommended_workers: 12
+    mixed_precision: true
+    compile_mode: true
+    
+  H100:
+    name: "NVIDIA H100"
+    memory_gb: 80
+    optimal_batch_sizes: [256, 384, 512, 640]
+    recommended_workers: 16
+    mixed_precision: true
+    compile_mode: true
+    
+  B200:
+    name: "NVIDIA B200"
+    memory_gb: 192
+    optimal_batch_sizes: [512, 768, 1024, 1280]
+    recommended_workers: 24
+    mixed_precision: true
+    compile_mode: true
+
+# 基礎訓練參數（遵循 PRD 規範）
+base_training:
+  img_size: 320
+  epochs: 300
+  data: "data/coco.yaml"
+  weights: ""
+  hyp: "data/hyp.scratch.tiny.yaml"
+  device: 0
+  amp: true
+  save_period: 25
+  
+# 實驗參數（可調整的部分）
+experiment_params:
+  batch_size_multipliers: [0.5, 1.0, 1.5, 2.0]
+  learning_rate_multipliers: [0.5, 1.0, 1.5, 2.0]
+  warmup_epochs: [1, 3, 5, 10]
+  optimizer_types: ["SGD", "Adam", "AdamW"]
