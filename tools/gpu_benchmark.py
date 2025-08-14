@@ -292,12 +292,10 @@ class GPUBenchmark:
                 rect=False,
                 rank=-1,
                 world_size=1,
-                workers=16,
+                workers=16,  # 16 workers 充分利用 192 核心系統
                 image_weights=False,
                 quad=False,
-                prefix='',
-                pin_memory=True,  # 加速 GPU 傳輸
-                persistent_workers=True  # 保持 worker 進程活躍
+                prefix=''
             )[0]
             print("✅ 資料載入器準備完成")
         except Exception as e:
