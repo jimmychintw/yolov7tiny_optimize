@@ -198,7 +198,7 @@ class GPUBenchmark:
                 torch.cuda.empty_cache()
                 torch.cuda.reset_peak_memory_stats()
                 
-                dummy_input = torch.randn(batch_size, 3, 320, 320).to(self.device, non_blocking=True)
+                dummy_input = torch.randn(batch_size, 3, 320, 320, dtype=torch.float32).to(self.device, non_blocking=True)
                 dummy_targets = self.create_realistic_targets(batch_size)
                 
                 # 🚨 三重證據強校驗
@@ -292,10 +292,12 @@ class GPUBenchmark:
                 rect=False,
                 rank=-1,
                 world_size=1,
-                workers=2,
+                workers=16,
                 image_weights=False,
                 quad=False,
-                prefix=''
+                prefix='',
+                pin_memory=True,  # 加速 GPU 傳輸
+                persistent_workers=True  # 保持 worker 進程活躍
             )[0]
             print("✅ 資料載入器準備完成")
         except Exception as e:
@@ -350,25 +352,10 @@ class GPUBenchmark:
                     
                     # 使用 tqdm 顯示進度
                     for i in tqdm(range(iterations), desc=f"    Batch {batch_size}", leave=False):
-                        if dataloader and i % 10 == 0:
-                            # 每 10 次迭代使用一次真實資料
-                            try:
-                                real_imgs, real_targets, _, _ = next(iter(dataloader))
-                                # 調整到目標 batch size
-                                if real_imgs.size(0) != batch_size:
-                                    indices = torch.randint(0, real_imgs.size(0), (batch_size,))
-                                    test_input = real_imgs[indices].to(self.device, dtype=torch.float32, non_blocking=True) / 255.0
-                                    test_targets = real_targets[indices].to(self.device) if real_targets is not None else self.create_realistic_targets(batch_size)
-                                else:
-                                    test_input = real_imgs.to(self.device, dtype=torch.float32, non_blocking=True) / 255.0
-                                    test_targets = real_targets.to(self.device) if real_targets is not None else self.create_realistic_targets(batch_size)
-                            except:
-                                test_input = torch.randn(batch_size, 3, img_size, img_size, dtype=torch.float32).to(self.device, non_blocking=True)
-                                test_targets = self.create_realistic_targets(batch_size)
-                        else:
-                            # 使用模擬資料
-                            test_input = torch.randn(batch_size, 3, img_size, img_size, dtype=torch.float32).to(self.device, non_blocking=True)
-                            test_targets = self.create_realistic_targets(batch_size)
+                        # 為了避免複雜的數據類型問題，暫時完全使用模擬資料
+                        # TODO: 之後可以改回使用真實資料
+                        test_input = torch.randn(batch_size, 3, img_size, img_size, dtype=torch.float32).to(self.device, non_blocking=True)
+                        test_targets = self.create_realistic_targets(batch_size)
                         
                         # 🚨 三重證據強校驗
                         self._ensure_on_cuda(test_input, model)
