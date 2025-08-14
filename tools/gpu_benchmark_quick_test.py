@@ -56,8 +56,15 @@ def quick_test():
         try:
             from models.yolo import Model
             from utils.loss import ComputeLoss
+            import yaml
             
             model = Model("cfg/training/yolov7-tiny.yaml", ch=3, nc=80).cuda()
+            
+            # 載入超參數
+            with open("data/hyp.scratch.tiny.yaml", 'r') as f:
+                hyp = yaml.safe_load(f)
+            model.hyp = hyp
+            
             compute_loss = ComputeLoss(model)
             
             # 測試前向傳播

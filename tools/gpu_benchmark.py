@@ -95,6 +95,13 @@ class GPUBenchmark:
         """建立測試用模型"""
         cfg = "cfg/training/yolov7-tiny.yaml"
         model = Model(cfg, ch=3, nc=80, anchors=None).to(self.device)
+        
+        # 載入超參數以支援 ComputeLoss
+        import yaml
+        with open("data/hyp.scratch.tiny.yaml", 'r') as f:
+            hyp = yaml.safe_load(f)
+        model.hyp = hyp  # 添加 hyp 屬性
+        
         return model
     
     def find_max_batch_size(self, model, dataloader, compute_loss, start_batch=512, max_batch=4096):
