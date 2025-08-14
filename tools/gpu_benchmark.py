@@ -101,6 +101,7 @@ class GPUBenchmark:
         with open("data/hyp.scratch.tiny.yaml", 'r') as f:
             hyp = yaml.safe_load(f)
         model.hyp = hyp  # 添加 hyp 屬性
+        model.gr = 1.0   # 添加 gr 屬性 (gain reduction)
         
         return model
     

@@ -64,6 +64,7 @@ def quick_test():
             with open("data/hyp.scratch.tiny.yaml", 'r') as f:
                 hyp = yaml.safe_load(f)
             model.hyp = hyp
+            model.gr = 1.0   # 添加 gr 屬性 (gain reduction)
             
             compute_loss = ComputeLoss(model)
             
