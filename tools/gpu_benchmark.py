@@ -230,7 +230,13 @@ class GPUBenchmark:
                     return False
                 raise e
         
-        # 修正的標準二分搜尋
+        # 修正的標準二分搜尋 - 先確認起始值是否可行
+        print(f"  先測試起始值 {start_batch}...")
+        if not test_batch_size(start_batch):
+            print(f"  ❌ 起始值 {start_batch} 就 OOM，從更小值開始")
+            start_batch = start_batch // 2
+            max_batch = start_batch * 2
+        
         low, high = start_batch, max_batch
         max_successful = 0
         
@@ -351,17 +357,17 @@ class GPUBenchmark:
                                 # 調整到目標 batch size
                                 if real_imgs.size(0) != batch_size:
                                     indices = torch.randint(0, real_imgs.size(0), (batch_size,))
-                                    test_input = real_imgs[indices].to(self.device, non_blocking=True)
+                                    test_input = real_imgs[indices].to(self.device, dtype=torch.float32, non_blocking=True) / 255.0
                                     test_targets = real_targets[indices].to(self.device) if real_targets is not None else self.create_realistic_targets(batch_size)
                                 else:
-                                    test_input = real_imgs.to(self.device, non_blocking=True)
+                                    test_input = real_imgs.to(self.device, dtype=torch.float32, non_blocking=True) / 255.0
                                     test_targets = real_targets.to(self.device) if real_targets is not None else self.create_realistic_targets(batch_size)
                             except:
-                                test_input = torch.randn(batch_size, 3, img_size, img_size).to(self.device, non_blocking=True)
+                                test_input = torch.randn(batch_size, 3, img_size, img_size, dtype=torch.float32).to(self.device, non_blocking=True)
                                 test_targets = self.create_realistic_targets(batch_size)
                         else:
                             # 使用模擬資料
-                            test_input = torch.randn(batch_size, 3, img_size, img_size).to(self.device, non_blocking=True)
+                            test_input = torch.randn(batch_size, 3, img_size, img_size, dtype=torch.float32).to(self.device, non_blocking=True)
                             test_targets = self.create_realistic_targets(batch_size)
                         
                         # 🚨 三重證據強校驗
@@ -520,15 +526,17 @@ class GPUBenchmark:
         model = self.create_model()
         compute_loss = ComputeLoss(model)
         
-        # 步驟 1: 尋找最大 batch size (如果啟用)
+        # 步驟 1: 設定最大 batch size
         max_batch_size = None
         if find_limit:
-            # H100 從 3072 開始，其他 GPU 從已知最大的 2 倍開始
             if gpu_type == "H100":
-                start_batch = 3072
+                # H100 的最大 batch size 已知為 3072，直接設定
+                print("🎯 H100 最大 batch size 設定為已知值: 3072")
+                max_batch_size = 3072
             else:
+                # 其他 GPU 進行搜尋
                 start_batch = max(gpu_config['optimal_batch_sizes']) * 2
-            max_batch_size = self.find_max_batch_size(model, None, compute_loss, start_batch)
+                max_batch_size = self.find_max_batch_size(model, None, compute_loss, start_batch)
         
         # 步驟 2: 生成擴展的 batch size 範圍
         if max_batch_size:
