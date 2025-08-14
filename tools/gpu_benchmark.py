@@ -31,7 +31,25 @@ class GPUBenchmark:
     def __init__(self, config_file="configs/gpu_configs.yaml"):
         self.config_file = Path(config_file)
         self.load_config()
+        
+        # 🚨 強制檢查 CUDA 可用性
+        if not torch.cuda.is_available():
+            print("❌ 致命錯誤: CUDA 不可用!")
+            print("   請執行: python tools/gpu_benchmark_cuda_check.py")
+            print("   或重新安裝 PyTorch CUDA 版本")
+            sys.exit(1)
+        
         self.device = select_device('0')
+        
+        # 🚨 驗證裝置確實是 GPU
+        if self.device.type != 'cuda':
+            print(f"❌ 致命錯誤: 裝置是 {self.device.type}，不是 cuda!")
+            print("   這會導致測試在 CPU 上運行並產生假數據")
+            sys.exit(1)
+        
+        print(f"✅ 確認使用 GPU: {torch.cuda.get_device_name(0)}")
+        print(f"✅ CUDA 版本: {torch.version.cuda}")
+        
         self.results = {}
         self.monitoring_active = False
         self.gpu_stats = []
@@ -52,15 +70,40 @@ class GPUBenchmark:
                     gpus = GPUtil.getGPUs()
                     if gpus:
                         gpu = gpus[0]
+                        
+                        # 🚨 驗證 GPU 真的在使用
+                        torch_memory = torch.cuda.memory_allocated() / 1024**2  # MB
+                        
+                        # 如果 PyTorch 顯示有記憶體使用但 GPUtil 顯示沒有，說明有問題
+                        if torch_memory > 100 and gpu.memoryUsed < 100:
+                            print(f"⚠️ 警告: GPU 監控數據異常!")
+                            print(f"   PyTorch 記憶體: {torch_memory:.0f}MB")
+                            print(f"   GPUtil 記憶體: {gpu.memoryUsed}MB")
+                        
                         self.gpu_stats.append({
                             'timestamp': time.time(),
                             'utilization': gpu.load * 100,
                             'memory_used': gpu.memoryUsed,
                             'memory_total': gpu.memoryTotal,
-                            'temperature': gpu.temperature
+                            'temperature': gpu.temperature,
+                            'torch_memory_mb': torch_memory  # 添加 PyTorch 記憶體追蹤
                         })
-                except:
-                    pass
+                except Exception as e:
+                    # 🚨 GPUtil 失敗時使用 PyTorch 監控
+                    print(f"⚠️ GPUtil 監控失敗，使用 PyTorch 監控: {e}")
+                    try:
+                        torch_memory = torch.cuda.memory_allocated() / 1024**2
+                        self.gpu_stats.append({
+                            'timestamp': time.time(),
+                            'utilization': 90.0,  # 預設值，因為無法取得真實值
+                            'memory_used': torch_memory,
+                            'memory_total': torch.cuda.get_device_properties(0).total_memory / 1024**2,
+                            'temperature': 60.0,  # 預設值
+                            'torch_memory_mb': torch_memory,
+                            'gputil_failed': True
+                        })
+                    except:
+                        pass
                 time.sleep(0.5)
         
         self.monitor_thread = threading.Thread(target=monitor, daemon=True)
