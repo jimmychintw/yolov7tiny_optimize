@@ -1,0 +1,39 @@
+# YOLOv7-tiny hyperparameters optimized for batch size 384
+# Scaled from BS=512 to BS=384
+
+lr0: 0.03  # initial learning rate (0.04 × 384/512)
+lrf: 0.01  # final OneCycleLR learning rate (保持不變)
+momentum: 0.937  # SGD momentum/Adam beta1
+weight_decay: 0.0005  # optimizer weight decay 5e-4
+warmup_epochs: 4.0  # warmup epochs (稍微減少，因為 batch 變小)
+warmup_momentum: 0.8  # warmup initial momentum
+warmup_bias_lr: 0.05  # warmup initial bias lr
+
+# 其餘參數保持不變...
+box: 0.05
+cls: 0.5
+cls_pw: 1.0
+obj: 1.0
+obj_pw: 1.0
+
+iou_t: 0.20
+anchor_t: 4.0
+fl_gamma: 0.0
+
+# Data augmentation - 保持不變
+hsv_h: 0.015
+hsv_s: 0.7
+hsv_v: 0.4
+degrees: 0.0
+translate: 0.15
+scale: 0.6
+shear: 0.0
+perspective: 0.0
+flipud: 0.0
+fliplr: 0.5
+mosaic: 1.0
+mixup: 0.08
+copy_paste: 0.0
+paste_in: 0.08
+
+loss_ota: 1
