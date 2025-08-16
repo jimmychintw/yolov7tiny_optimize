@@ -1,28 +1,3 @@
-好的，這是 ys.py 的完整內容（可直接複製貼上使用）：
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-ys.py  —  YOLOv7 Short Sweep
-目的：不改 train.py，用最少參數做常用 sweep（workers × batch 等），自動挑最佳組合。
-特色（簡單版但夠用）：
-  1) 自動偵測 GPU（H100/5090/4090...）與 /dev/shm，實驗名短而易讀 (如 KATN-G4090-bs512-w12-RQ)。
-  2) 兩種 profile：--fast（預設）/ --regular，會依 GPU 選合適網格（可在 sweep_profiles.yaml 改）。
-  3) 一次 sweep 多組：workers、batch_size、rect/quad、增強關閉（A0），自動解析 s/it、GPU 利用率/功耗/VRAM。
-  4) OOM 自動回退（每次 -64）直到 --min-batch。
-  5) 依 batch 線性放大 hyp 的 lr0（可用 --no-scale-lr 關閉）。
-  6) 產出 CSV，並印出最佳建議指令（可直接複製）。
-
-最小用法：
-  python ys.py --svr runpod \
-    --train train.py --data data/coco.yaml --cfg cfg/training/yolov7-tiny.yaml \
-    --weights yolov7-tiny.pt --hyp data/hyp.scratch.tiny.bs384.yaml --img 320 --epochs 1
-
-可選：
-  --regular（取代 --fast）
-  --bs 384,512,640   （覆寫 profile 的 batch_sizes）
-  --w  8,12,16       （覆寫 profile 的 workers）
-"""
 
 import argparse, os, sys, time, subprocess, threading, shutil, re, csv, statistics, hashlib
 from pathlib import Path
