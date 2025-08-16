@@ -61,6 +61,18 @@ def git_describe(path=Path(__file__).parent):  # path must be a directory
 
 
 def select_device(device='', batch_size=None):
+    import torch
+
+    # ---- Apple Silicon (MPS) support ----
+    if isinstance(device, str) and device.lower() in ('mps', 'metal', 'apple'):
+        if torch.backends.mps.is_available():
+            print('Using Apple Metal (MPS) backend')
+            return torch.device('mps')
+        else:
+            print('MPS unavailable, falling back to CPU')
+            return torch.device('cpu')
+    # -------------------------------------
+    
     # device = 'cpu' or '0' or '0,1,2,3'
     s = f'YOLOR 🚀 {git_describe() or date_modified()} torch {torch.__version__} '  # string
     cpu = device.lower() == 'cpu'
