@@ -1,0 +1,42 @@
+# YOLOv7-tiny hyperparameters optimized for batch size 512
+# Based on hyp.scratch.tiny.yaml with proper scaling for BS=512
+# Batch size scaling: 512/64 = 8x, using conservative 4x lr scaling
+
+lr0: 0.04  # initial learning rate (0.01 × 4 for BS=512)
+lrf: 0.01  # final OneCycleLR learning rate (lr0 * lrf)
+momentum: 0.937  # SGD momentum/Adam beta1
+weight_decay: 0.0005  # optimizer weight decay 5e-4
+warmup_epochs: 5.0  # warmup epochs (extended from 3.0 for large batch)
+warmup_momentum: 0.8  # warmup initial momentum
+warmup_bias_lr: 0.05  # warmup initial bias lr (reduced from 0.1 for stability)
+
+# Loss gains - keep original
+box: 0.05  # box loss gain
+cls: 0.5  # cls loss gain
+cls_pw: 1.0  # cls BCELoss positive_weight
+obj: 1.0  # obj loss gain (scale with pixels)
+obj_pw: 1.0  # obj BCELoss positive_weight
+
+# Training thresholds - keep original
+iou_t: 0.20  # IoU training threshold
+anchor_t: 4.0  # anchor-multiple threshold
+fl_gamma: 0.0  # focal loss gamma (efficientDet default gamma=1.5)
+
+# Data augmentation - slightly enhanced for better generalization with large batch
+hsv_h: 0.015  # image HSV-Hue augmentation (fraction)
+hsv_s: 0.7  # image HSV-Saturation augmentation (fraction)
+hsv_v: 0.4  # image HSV-Value augmentation (fraction)
+degrees: 0.0  # image rotation (+/- deg)
+translate: 0.15  # image translation (increased from 0.1)
+scale: 0.6  # image scale (increased from 0.5)
+shear: 0.0  # image shear (+/- deg)
+perspective: 0.0  # image perspective (+/- fraction), range 0-0.001
+flipud: 0.0  # image flip up-down (probability)
+fliplr: 0.5  # image flip left-right (probability)
+mosaic: 1.0  # image mosaic (probability)
+mixup: 0.08  # image mixup (increased from 0.05)
+copy_paste: 0.0  # segment copy-paste (probability)
+paste_in: 0.08  # image copy paste (increased from 0.05)
+
+# Loss computation
+loss_ota: 1  # use ComputeLossOTA (keep for consistency)
