@@ -1,0 +1,132 @@
+G4090-fast:
+  workers:
+  - 8
+  - 12
+  - 16
+  batch_sizes:
+  - 384
+  - 512
+  - 640
+  rect:
+  - 1
+  quad:
+  - 1
+  multi_scale:
+  - 0
+  image_weights:
+  - 0
+  aug_off:
+  - 1
+  - 0
+G4090-regular:
+  workers:
+  - 8
+  - 12
+  batch_sizes:
+  - 384
+  - 512
+  rect:
+  - 0
+  quad:
+  - 1
+  multi_scale:
+  - 0
+  image_weights:
+  - 0
+  aug_off:
+  - 0
+G5090-fast:
+  workers:
+  - 12
+  - 16
+  - 20
+  batch_sizes:
+  - 512
+  - 640
+  - 768
+  rect:
+  - 1
+  quad:
+  - 1
+  multi_scale:
+  - 0
+  image_weights:
+  - 0
+  aug_off:
+  - 1
+  - 0
+H100-fast:
+  workers:
+  - 16
+  - 20
+  - 24
+  batch_sizes:
+  - 640
+  - 768
+  - 896
+  rect:
+  - 1
+  quad:
+  - 1
+  multi_scale:
+  - 0
+  image_weights:
+  - 0
+  aug_off:
+  - 1
+  - 0
+H100-regular:
+  workers:
+  - 12
+  - 16
+  - 20
+  batch_sizes:
+  - 512
+  - 640
+  - 768
+  rect:
+  - 0
+  quad:
+  - 1
+  multi_scale:
+  - 0
+  image_weights:
+  - 0
+  aug_off:
+  - 0
+generic-fast:
+  workers:
+  - 8
+  - 12
+  batch_sizes:
+  - 256
+  - 384
+  - 512
+  rect:
+  - 1
+  quad:
+  - 1
+  multi_scale:
+  - 0
+  image_weights:
+  - 0
+  aug_off:
+  - 1
+  - 0
+generic-regular:
+  workers:
+  - 4
+  - 8
+  batch_sizes:
+  - 256
+  - 384
+  rect:
+  - 0
+  quad:
+  - 1
+  multi_scale:
+  - 0
+  image_weights:
+  - 0
+  aug_off:
+  - 0
