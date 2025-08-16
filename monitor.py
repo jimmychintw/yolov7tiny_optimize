@@ -909,7 +909,7 @@ class EnhancedMonitor:
                 print(f"\n{ColorCode.CYAN}{'='*100}{ColorCode.RESET}")
                 print(f"Update rate: {1000/self.args.refresh:.1f} Hz | "
                       f"History: {self.args.history} points | "
-                      f"Log: {self.log_file if self.log_file else 'Auto-detect'}")
+                      f"Log: {self.args.log_file if self.args.log_file else 'Auto-detect'}")
                 
                 # 等待
                 time.sleep(self.args.refresh)
