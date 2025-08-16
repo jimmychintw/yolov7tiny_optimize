@@ -1,9 +1,9 @@
 
 
 # train and val data as 1) directory: path/images/, 2) file: path/images.txt, or 3) list: [path1/images/, path2/images/]
-train: /root/coco/images/train2017/  # 118287 images
-val: /root/coco/images/val2017/  # 5000 images
-test: /root/coco/images/test-dev2017/  # 20288 of 40670 images, submit to https://competitions.codalab.org/competitions/20794
+train: /workspace/coco/images/train2017/  # 118287 images
+val: /workspace/coco/images/val2017/  # 5000 images
+test: /workspace/scoco/images/test-dev2017/  # 20288 of 40670 images, submit to https://competitions.codalab.org/competitions/20794
 
 # number of classes
 nc: 80
