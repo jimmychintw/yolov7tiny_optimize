@@ -8,7 +8,12 @@ from copy import deepcopy
 from pathlib import Path
 from threading import Thread
 
+import cv2
 import numpy as np
+
+# 避免高核心機器上 OpenCV 與 DataLoader workers 搶 CPU
+cv2.setNumThreads(1)
+cv2.ocl.setUseOpenCL(False)
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
