@@ -12,9 +12,10 @@ def main(opt):
     # 建立 dataloader
     dataloader, dataset = create_dataloader(
         path=opt.data,
-        img_size=opt.img_size,
+        imgsz=opt.img_size,
         batch_size=opt.batch_size,
         stride=32,
+        opt=opt,
         hyp=None,
         augment=True,
         cache=opt.cache,
@@ -55,5 +56,7 @@ if __name__ == "__main__":
                         help="number of batches to test")
     parser.add_argument("--cache", action="store_true",
                         help="use --cache to test RAM cached dataset")
+    parser.add_argument("--single-cls", action="store_true",
+                        help="treat as single-class dataset")
     opt = parser.parse_args()
     main(opt)
