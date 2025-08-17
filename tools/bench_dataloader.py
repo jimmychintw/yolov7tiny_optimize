@@ -4,8 +4,28 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import time
 import argparse
+import yaml
+from pathlib import Path
 from utils.datasets import create_dataloader
 from utils.general import increment_path
+
+
+def detect_data_config():
+    """自動偵測正確的資料集配置檔案"""
+    configs = {
+        '/workspace/coco/': 'data/coco_vast.ai.yaml',
+        '/root/coco/': 'data/coco_runpod.yaml', 
+        '/Volumes/': 'data/coco_mac.yaml',
+    }
+    
+    for path_prefix, config_file in configs.items():
+        if os.path.exists(path_prefix):
+            print(f"偵測到資料路徑: {path_prefix}")
+            print(f"使用配置檔案: {config_file}")
+            return config_file
+    
+    # 預設值
+    return 'data/coco.yaml'
 
 
 def main(opt):
@@ -45,7 +65,7 @@ def main(opt):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--data", type=str, default="data/coco_vast.ai.yaml", help="dataset yaml path")
+        "--data", type=str, default=None, help="dataset yaml path (auto-detect if not specified)")
     parser.add_argument("--img-size", type=int, default=320,
                         help="inference size (pixels)")
     parser.add_argument("--batch-size", type=int,
@@ -59,4 +79,9 @@ if __name__ == "__main__":
     parser.add_argument("--single-cls", action="store_true",
                         help="treat as single-class dataset")
     opt = parser.parse_args()
+    
+    # 自動偵測資料配置檔案
+    if opt.data is None:
+        opt.data = detect_data_config()
+    
     main(opt)
