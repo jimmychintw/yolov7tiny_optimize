@@ -88,6 +88,11 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
                         sampler=sampler,
                         pin_memory=True,
                         collate_fn=LoadImagesAndLabels.collate_fn4 if quad else LoadImagesAndLabels.collate_fn)
+    
+    # Debug 資訊：印出實際啟動的 worker 數（一次性 debug，安心用）
+    loader_type = "InfiniteDataLoader" if not image_weights else "DataLoader"
+    print(f"[DataLoader] workers={nw}, pin_memory=True, persistent_like={loader_type}, prefetch≈2")
+    
     return dataloader, dataset
 
 
