@@ -80,20 +80,19 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
     batch_size = min(batch_size, len(dataset))
     nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, workers])  # number of workers
     sampler = torch.utils.data.distributed.DistributedSampler(dataset) if rank != -1 else None
-    # A/B 測試：暫時改用官方 DataLoader 觀察 worker 使用情況
-    loader = torch.utils.data.DataLoader
-    # 原始設定：loader = torch.utils.data.DataLoader if image_weights else InfiniteDataLoader
+    loader = torch.utils.data.DataLoader if image_weights else InfiniteDataLoader
     # Use torch.utils.data.DataLoader() if dataset.properties will update during training else InfiniteDataLoader()
     dataloader = loader(dataset,
                         batch_size=batch_size,
                         num_workers=nw,
                         sampler=sampler,
                         pin_memory=True,
+                        prefetch_factor=4,
                         collate_fn=LoadImagesAndLabels.collate_fn4 if quad else LoadImagesAndLabels.collate_fn)
     
     # Debug 資訊：印出實際啟動的 worker 數（一次性 debug，安心用）
-    loader_type = "DataLoader (A/B測試)"  # 暫時固定為官方 DataLoader
-    print(f"[DataLoader] workers={nw}, pin_memory=True, persistent_like={loader_type}, prefetch≈2")
+    loader_type = "InfiniteDataLoader" if not image_weights else "DataLoader"
+    print(f"[DataLoader] workers={nw}, pin_memory=True, persistent_like={loader_type}, prefetch_factor=4")
     
     return dataloader, dataset
 
